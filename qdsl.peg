@@ -1,0 +1,315 @@
+{
+package qdsl
+
+type Limits struct {
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+}
+
+type Limit struct {
+	Sort   any     `json:"sort"`
+	Limits *Limits `json:"limits"`
+}
+
+type Direction struct {
+	Direction string `json:"direction"`
+	Field     any    `json:"field"`
+}
+
+type Variable struct {
+	Variable   []string `json:"variable"`
+	Op         string   `json:"op"`
+	Evaluation string   `json:"evaluation"`
+}
+
+type Expression struct {
+	Expression *Variable `json:"expression"`
+	BoolOp     string    `json:"boolOp"`
+}
+
+type Filter struct {
+	Filter [][]*Expression `json:"filter"`
+
+	// ...limits
+}
+
+type Range struct {
+	From *string `json:"from"`
+	To   *string `json:"to"`
+}
+
+type Node struct {
+	Name   *string `json:"name"`
+    Ranges []*Range `json:"ranges"`
+}
+
+type Block struct {
+	*Filter  `json:"filter"`
+	Any      bool       `json:"any"`
+	Catchall bool       `json:"catchall"`
+	Node     *Node      `json:"node"`
+	IsGroup  bool       `json:"isGroup"`
+	Children []*Element `json:"children"`
+}
+
+type Path []*Block
+
+type Element struct {
+	Action     string   `json:"action"`
+	Path       Path `json:"path"`
+	RootExpand bool     `json:"rootExpand"`
+    Query      string   `json:"query"`
+}
+
+func toString(i interface{}) string {
+	if i == nil {
+		return ""
+	}
+	switch i.(type) {
+	case string:
+		return i.(string)
+	default:
+		return string(i.([]byte))
+	}
+}
+
+func arrayToStringArray(arr interface{}) (result []string) {
+	for _, i := range arr.([]interface{}) {
+		result = append(result, toString(i))
+	}
+	return
+}
+
+}
+
+start = QUERY
+
+QUERY = base:(e:ELEMENT (__ "," __ / [ ]+) { return e, nil })* last:ELEMENT {
+	return append(base.([]any), last), nil
+}
+
+ELEMENT = action:UNARY levels:(l:LEVEL "." { return l, nil })* last:(LEVEL / "_") {
+	var blocks []*Block
+
+	for _, level := range levels.([]any) {
+		if block, ok := level.(*Block); ok {
+			blocks = append(blocks, block)
+		}
+	}
+	block, ok := last.(*Block)
+	// if last == "_" {
+	if !ok {
+		return &Element{Action: toString(action), Path: blocks, RootExpand: true}, nil
+	}
+
+	return &Element{Action: toString(action), Path: append(blocks, block)}, nil
+}
+UNARY = op:("-")? { 
+	if op == "-" {
+		return "subtract", nil
+	}
+	return "add", nil
+}
+
+NODE = nodename:NODENAME ranges:NODERANGE? {
+	name := toString(nodename)
+	var arr []*Range
+	if val, ok := ranges.([]interface{}); ok {
+		for _, a := range val {
+			arr = append(arr, a.(*Range))
+		}
+	}
+	return &Node{Name: &name, Ranges: arr}, nil
+}
+/ ranges:NODERANGE { 
+	var arr []*Range
+	if val, ok := ranges.([]interface{}); ok {
+		for _, a := range val {
+			arr = append(arr, a.(*Range))
+		}
+	}
+	return &Node{Name: nil, Ranges: arr}, nil
+ }
+
+NODENAME = nodename:(head:[a-z0-9] tail:[a-z_0-9\\-]i* {
+	return toString(head) + strings.Join(arrayToStringArray(tail), ""), nil
+} )
+
+NODERANGE = "[" ranges:(from:INT to:("-" to:INT {
+return to, nil
+})? __ ","? __ {
+	fromValue := toString(from)
+	toValue := toString(to)
+	return &Range{From: &fromValue, To: &toValue}, nil
+})+ "]" {
+	return ranges, nil
+}
+
+INT = num:[0-9a-z]i+ {
+	return strings.Join(arrayToStringArray(num), ""), nil
+}
+
+LEVEL = "(" children:QUERY ")" {
+	var arr []*Element
+	if val, ok := children.([]interface{}); ok {
+		for _, a := range val {
+			arr = append(arr, a.(*Element))
+		}
+	}
+	return &Block{IsGroup: true, Children: arr}, nil
+}
+/ "<" block:BLOCK {
+return &Block{ Any: false, Catchall: true, Filter:block.(*Filter)}, nil
+}
+/ "*" block:BLOCK {
+return &Block{ Any: true, Filter:block.(*Filter)}, nil
+}
+/ node:NODE block:BLOCK {
+return &Block{ Any: false, Node: node.(*Node), Filter:block.(*Filter)}, nil
+}
+
+BLOCK = limits:LIMIT filter:SEARCH { 
+	var filters [][]*Expression
+
+	for _, i := range filter.([]any) {
+		var expressions []*Expression
+		for _, j := range i.([]any) {
+			expressions = append(expressions, j.(*Expression))
+		}
+		filters = append(filters, expressions)
+	}
+
+	return &Filter{filters}, nil}
+/ filter:SEARCH limits:LIMIT {
+	var filters [][]*Expression
+
+	for _, i := range filter.([]any) {
+		var expressions []*Expression
+		for _, j := range i.([]any) {
+			expressions = append(expressions, j.(*Expression))
+		}
+		filters = append(filters, expressions)
+	}
+
+	return &Filter{filters}, nil}
+/ filter:SEARCH {
+	var filters [][]*Expression
+
+	for _, i := range filter.([]any) {
+		var expressions []*Expression
+		for _, j := range i.([]any) {
+			expressions = append(expressions, j.(*Expression))
+		}
+		filters = append(filters, expressions)
+	}
+
+	return &Filter{filters}, nil}
+
+LIMIT = "{" sort:SORT limit:NUMBER ".." offset:NUMBER "}" {
+ return &Limit{ Sort:sort, Limits: &Limits{ limit.(int), offset.(int) }}, nil }
+/ "{" sort:SORT limit:NUMBER "}" {
+ return &Limit{ Sort:sort, Limits: &Limits{ limit.(int) , 0 }}, nil }
+/ "{" sort:SORT "}" { 
+return &Limit{ Sort:sort }, nil }
+
+SORT = (direction:DIRECTION v:VARIABLE ","? __ {
+ return &Direction{toString(direction) ,v }, nil})*
+
+DIRECTION = d:("^")? {
+	if d == nil {
+		return "ASC", nil
+	}
+	return "DESC", nil
+}
+
+SEARCH = filters:("[?" filter:FILTER "?]"{
+    return filter, nil
+})* {
+    return filters, nil
+}
+
+FILTER = (expression:EXPRESSION __ boolOp:("&&" / "||")? __ {
+	expressionValue, _ := expression.(*Variable)
+	return &Expression{expressionValue, toString(boolOp)}, nil
+})+
+
+EXPRESSION = variable:VARIABLE __ op:OP __ evaluation:EVALUATION {
+	var arr []string
+	for _, i := range variable.([]any) {
+		arr = append(arr, toString(i))
+	}
+	return &Variable{arr, toString(op), toString(evaluation)}, nil
+}
+
+OP = "=="
+/ "=~"
+/ "!~"
+/ "<="
+/ ">="
+/ "<"
+/ ">"
+/ "!="
+/ "IN"i
+/ "LIKE"i
+/ "NOT LIKE"i
+
+VARIABLE = variable:("object" / "link" / "path" / "@" / "$") attribute:ATTRIBUTE+ {
+    return append([]any{variable}, attribute.([]any)...), nil
+}
+
+ATTRIBUTE = ("." attrname:ATTRNAME {
+ return attrname, nil })
+/ ("[" attrname:(STRING_LITERAL / INT) "]" { 
+return attrname, nil })
+
+ATTRNAME = attrname:[a-z\\*0-9_\\-]i+ {
+	var arr []string
+
+	for _, a := range attrname.([]any) {
+		arr = append(arr, toString(a))
+	}
+
+	return strings.Join(arr, ""), nil
+}
+
+STRING_LITERAL = "'" text:("\\'"/[^'])+ "'" {
+	return strings.Join(text.([]string), ""), nil
+}
+
+BOOL = "true" / "false" / "True" / "False"
+NULL = "null"
+
+EVALUATION = LITERAL
+
+LITERAL = DBL_LITERAL / SNG_LITERAL / NUMBER / BOOL / NULL / ARR
+
+SNG_LITERAL = q1:"'" cc:[^\\']* q2:"'" { return toString(q1) + strings.Join(arrayToStringArray(cc), "") + toString(q2), nil }
+DBL_LITERAL = q1:'"' cc:[^\\"]* q2:'"' { return toString(q1) + strings.Join(arrayToStringArray(cc), "")  + toString(q2), nil }
+
+NUMBER = num:[0-9]+ tail:('.' [0-9]+)? {
+	fmt.Println("AAAAAAaa")
+  arr:= tail.([]string)
+  var end string
+  if len(arr) > 0 {
+     // FIXME [][]arr?
+     // end = "." + strings.Join(arr[1], "")
+  }
+
+  return strings.Join(num.([]string), "")  + end, nil
+}
+
+ARR = '[' __
+  body:(hd:LITERAL items:(__ ',' __ e:LITERAL { return e, nil })* __ {
+	arr := []any{hd}
+	return append(arr, items), nil
+})?
+']' {
+	bodyArr := body.([]string)
+	arr := []string{}
+	if len(bodyArr) > 0 {
+		arr = append(arr, strings.Join(bodyArr, ","))
+	}
+	return arr, nil
+}
+
+__ = [ ]*
