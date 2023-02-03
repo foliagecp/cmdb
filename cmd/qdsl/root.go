@@ -1,11 +1,10 @@
+// Copyright 2023 NJWS Inc.
 // Copyright 2022 Listware
 
 package main
 
 import (
 	"errors"
-	"fmt"
-	"os"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -32,18 +31,10 @@ var rootCmd = &cobra.Command{
 		if len(args) < 1 {
 			return errors.New("requires at least one arg")
 		}
+
 		return nil
 	},
 	Run: qdslQuery,
-}
-
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
 }
 
 func init() {
