@@ -1,3 +1,4 @@
+// Copyright 2023 NJWS Inc.
 // Copyright 2022 Listware
 
 package documents
@@ -39,11 +40,6 @@ func (id DocumentID) Validate() error {
 		return fmt.Errorf("Key part of '%s' is empty", string(id))
 	}
 	return nil
-}
-
-// pathEscape escapes the given value for use in a URL path.
-func pathEscape(s string) string {
-	return url.QueryEscape(s)
 }
 
 // pathUnescape unescapes the given value for use in a URL path.
