@@ -1,3 +1,4 @@
+// Copyright 2023 NJWS Inc.
 // Copyright 2022 Listware
 
 package qdsl
@@ -12,8 +13,8 @@ import (
 )
 
 var (
-	pathLinks = []string{"links"}
-	rootName  = "root"
+	// pathLinks = []string{"links"}
+	rootName = "root"
 )
 
 type refSpec struct {
@@ -64,7 +65,7 @@ func pathToAql(element *Element, options *pbqdsl.Options) {
 	// <...
 	hasCatchallValue := 0
 
-	hasCatchall := hasPath && !!qdsl[0].Catchall
+	hasCatchall := hasPath && qdsl[0].Catchall
 	if hasCatchall {
 		hasCatchallValue = 1
 	}
@@ -159,19 +160,19 @@ func getSpecialDepth(options *pbqdsl.Options) int {
 	return 0
 }
 
-func autoRestrict(pathVar string, reverse bool) string {
-	var reverseStr = "iv"
-	if reverse {
-		reverseStr = "0, iv"
-	}
-	return fmt.Sprintf(
-		`
-filter (for iv in 0..(length(%s.vertices) - 1)
-          let r = %s.vertices[iv]._meta.restrict
-          return iv < 0 || !r || (for e in slice(%s.edges, %s)
-                                  return parse_identifier(e).collection) all in r
-       ) all == true`, pathVar, pathVar, pathVar, reverseStr)
-}
+// func autoRestrict(pathVar string, reverse bool) string {
+// 	var reverseStr = "iv"
+// 	if reverse {
+// 		reverseStr = "0, iv"
+// 	}
+// 	return fmt.Sprintf(
+// 		`
+// filter (for iv in 0..(length(%s.vertices) - 1)
+//           let r = %s.vertices[iv]._meta.restrict
+//           return iv < 0 || !r || (for e in slice(%s.edges, %s)
+//                                   return parse_identifier(e).collection) all in r
+//        ) all == true`, pathVar, pathVar, pathVar, reverseStr)
+// }
 
 func assembleFrags(frags []string, separator string) string {
 	// FIXME remove '\n' from array
@@ -242,9 +243,9 @@ func convertLevelToAQL(block *Block, i int, refSpec refSpec) string {
 }
 
 func single(pathVar string, i int) refPath {
-	j := i
+	j := i + 1
 	//if i > 0 {
-	j = i + 1
+	//j = i + 1
 	//}
 	return refPath{
 		v: fmt.Sprintf("%s.vertices[%d]", pathVar, j),
@@ -328,13 +329,13 @@ func padZeroes(i, paddedSize int) (s string) {
 	return
 }
 
-func getQuerySort(qdsl *Block) (s string) {
-	if qdsl == nil {
-		return
-	}
+// func getQuerySort(qdsl *Block) (s string) {
+// 	if qdsl == nil {
+// 		return
+// 	}
 
-	return
-}
+// 	return
+// }
 
 /*
 function getQueryLimit(qdsl) {
