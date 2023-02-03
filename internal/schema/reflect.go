@@ -1,3 +1,6 @@
+// Copyright 2023 NJWS Inc.
+// Copyright 2022 Listware
+
 package schema
 
 import (
@@ -379,7 +382,6 @@ func (t *Type) stringKeywords(tags []string) {
 				switch val {
 				case "date-time", "email", "hostname", "ipv4", "ipv6", "uri":
 					t.Format = val
-					break
 				}
 			}
 		}

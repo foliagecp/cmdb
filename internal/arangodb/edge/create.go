@@ -1,3 +1,4 @@
+// Copyright 2023 NJWS Inc.
 // Copyright 2022 Listware
 
 package edge
@@ -5,7 +6,6 @@ package edge
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"git.fg-tech.ru/listware/cmdb/internal/arangodb"
 	driver "github.com/arangodb/go-driver"
@@ -29,7 +29,6 @@ func Create(ctx context.Context, client driver.Client, name string, payload any)
 		if err = json.Unmarshal(b, &req); err != nil {
 			return
 		}
-		fmt.Println("create edge bytes ", req)
 		meta, err = collection.CreateDocument(ctx, req)
 		return
 	}

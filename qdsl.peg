@@ -131,7 +131,7 @@ NODE = nodename:NODENAME ranges:NODERANGE? {
 	return &Node{Name: nil, Ranges: arr}, nil
  }
 
-NODENAME = nodename:(head:[a-z0-9] tail:[a-z_0-9\\-]i* {
+NODENAME = nodename:(head:[A-Za-z0-9] tail:[A-Za-z_0-9\\-]i* {
 	return toString(head) + strings.Join(arrayToStringArray(tail), ""), nil
 } )
 

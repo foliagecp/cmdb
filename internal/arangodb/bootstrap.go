@@ -83,8 +83,7 @@ func Bootstrap(ctx context.Context) (err error) {
 	if !ok {
 		options := &driver.CreateCollectionOptions{
 			KeyOptions: &driver.CollectionKeyOptions{
-				Type: driver.KeyGeneratorTraditional,
-			},
+				Type: driver.KeyGeneratorType("uuid")},
 		}
 		if _, err = db.CreateCollection(ctx, objectsCollection, options); err != nil {
 			return

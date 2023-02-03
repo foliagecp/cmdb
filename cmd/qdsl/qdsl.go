@@ -1,3 +1,4 @@
+// Copyright 2023 NJWS Inc.
 // Copyright 2022 Listware
 
 package main
@@ -17,7 +18,6 @@ import (
 
 var options = qdsl.NewOptions()
 
-var byPT string
 var customFilter []string
 
 var confirm bool
@@ -39,7 +39,7 @@ func buildFilter(query string, filters []string) string {
 		filters = filters[1:]
 	}
 
-	if strings.Index(query, "[?") != -1 {
+	if strings.Contains(query, "[?") {
 		i := strings.Index(query, "?]")
 		if i == -1 {
 			log.Error("Error while parsing filter: can't find close filter operator '?]'")

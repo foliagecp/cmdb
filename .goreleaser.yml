@@ -1,8 +1,4 @@
 project_name: cmdb
-gitea_urls:
-  api: http://git.fg-tech.ru/api/v1
-  download: http://git.fg-tech.ru
-  skip_tls_verify: true
 
 builds:
   - main: ./cmd/qdsl

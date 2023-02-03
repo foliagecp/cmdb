@@ -1,3 +1,4 @@
+// Copyright 2023 NJWS, INC
 // Copyright 2022 Listware
 
 package finder
@@ -11,6 +12,11 @@ import (
 	"git.fg-tech.ru/listware/cmdb/internal/arangodb/query"
 	"git.fg-tech.ru/listware/proto/sdk/pbcmdb"
 	"git.fg-tech.ru/listware/proto/sdk/pbcmdb/pbfinder"
+)
+
+const (
+	mask       = "FOR t IN %s FILTER %s RETURN t"
+	collection = "links"
 )
 
 func (s *Server) Links(ctx context.Context, request *pbfinder.Request) (response *pbfinder.Response, err error) {
@@ -31,8 +37,9 @@ func (s *Server) Links(ctx context.Context, request *pbfinder.Request) (response
 		args = append(args, "t._name == @name")
 		vars["name"] = request.Name
 	}
-
-	metas, resp, err := query.Query(ctx, s.client, fmt.Sprintf("FOR t IN links FILTER %s RETURN t", strings.Join(args, " && ")), vars)
+	filter := strings.Join(args, " && ")
+	q := fmt.Sprintf(mask, collection, filter)
+	metas, resp, err := query.Query(ctx, s.client, q, vars)
 	if err != nil {
 		return
 	}
