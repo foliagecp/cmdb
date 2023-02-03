@@ -1,3 +1,4 @@
+// Copyright 2023 NJWS Inc.
 // Copyright 2022 Listware
 
 package server
@@ -18,7 +19,9 @@ import (
 	"git.fg-tech.ru/listware/proto/sdk/pbcmdb"
 	"git.fg-tech.ru/listware/proto/sdk/pbcmdb/pbfinder"
 	"git.fg-tech.ru/listware/proto/sdk/pbcmdb/pbqdsl"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // set max 100 MB
@@ -27,6 +30,8 @@ const maxMsgSize = 100 * 1024 * 1024
 var (
 	cmdbAddr = "127.0.0.1"
 	cmdbPort = "31415"
+
+	log = logrus.New()
 )
 
 func init() {
@@ -38,8 +43,8 @@ func init() {
 	}
 }
 
-func New() {
-	ctx, cancel := context.WithCancel(context.Background())
+func Run(ctx context.Context) (err error) {
+	ctx, cancel := context.WithCancel(ctx)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan,
@@ -65,44 +70,46 @@ func New() {
 		}
 	}()
 
-	if err := serve(ctx); err != nil {
-		fmt.Println(err)
-		return
-	}
-	return
+	return serve(ctx)
 }
 
 func serve(ctx context.Context) (err error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	log.Info("bootstrap arangodb")
 
 	if err = arangodb.Bootstrap(ctx); err != nil {
 		return
 	}
-
-	pc, err := net.Listen("tcp", fmt.Sprintf(":%s", cmdbPort))
+	port := fmt.Sprintf(":%s", cmdbPort)
+	pc, err := net.Listen("tcp4", port)
 	if err != nil {
 		return
 	}
 	defer pc.Close()
 
 	server := grpc.NewServer(
-		grpc.MaxMsgSize(maxMsgSize),
 		grpc.MaxRecvMsgSize(maxMsgSize),
 		grpc.MaxSendMsgSize(maxMsgSize),
 	)
 	defer server.Stop()
 
+	log.Info("executing qdsl")
 	qdsl, err := qdsl.New(ctx)
 	if err != nil {
 		return
 	}
 	pbqdsl.RegisterQdslServiceServer(server, pbqdsl.QdslServiceServer(qdsl))
 
+	log.Info("executing finder")
 	finder, err := finder.New(ctx)
 	if err != nil {
 		return
 	}
 	pbfinder.RegisterFinderServiceServer(server, pbfinder.FinderServiceServer(finder))
 
+	log.Info("executing edge")
 	edge, err := edge.New(ctx)
 	if err != nil {
 		return
@@ -110,6 +117,7 @@ func serve(ctx context.Context) (err error) {
 
 	pbcmdb.RegisterEdgeServiceServer(server, pbcmdb.EdgeServiceServer(edge))
 
+	log.Info("executing vertex")
 	vertex, err := vertex.New(ctx)
 	if err != nil {
 		return
@@ -117,7 +125,14 @@ func serve(ctx context.Context) (err error) {
 
 	pbcmdb.RegisterVertexServiceServer(server, pbcmdb.VertexServiceServer(vertex))
 
-	go server.Serve(pc)
+	log.Info("serving ", port)
+
+	go func() {
+		if err = server.Serve(pc); err != nil {
+			cancel()
+		}
+
+	}()
 
 	<-ctx.Done()
 
@@ -125,6 +140,5 @@ func serve(ctx context.Context) (err error) {
 }
 
 func Client() (conn *grpc.ClientConn, err error) {
-
-	return grpc.Dial(fmt.Sprintf("%s:%s", cmdbAddr, cmdbPort), grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize), grpc.MaxCallSendMsgSize(maxMsgSize)))
+	return grpc.Dial(fmt.Sprintf("%s:%s", cmdbAddr, cmdbPort), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize), grpc.MaxCallSendMsgSize(maxMsgSize)))
 }
