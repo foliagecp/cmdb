@@ -1,3 +1,4 @@
+// Copyright 2023 NJWS, Inc.
 // Copyright 2022 Listware
 
 package vertex
@@ -25,9 +26,9 @@ func Update(ctx context.Context, client driver.Client, name, key string, payload
 		if err = json.Unmarshal(b, &req); err != nil {
 			return
 		}
-		meta, err = collection.ReplaceDocument(ctx, key, req)
+		meta, err = collection.UpdateDocument(ctx, key, req)
 		return
 	}
-	meta, err = collection.ReplaceDocument(ctx, key, payload)
+	meta, err = collection.UpdateDocument(ctx, key, payload)
 	return
 }
