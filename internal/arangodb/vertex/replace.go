@@ -1,7 +1,6 @@
 // Copyright 2023 NJWS, Inc.
-// Copyright 2022 Listware
 
-package edge
+package vertex
 
 import (
 	"context"
@@ -11,12 +10,12 @@ import (
 	driver "github.com/arangodb/go-driver"
 )
 
-func Update(ctx context.Context, client driver.Client, name, key string, payload any) (meta driver.DocumentMeta, resp map[string]any, err error) {
+func Replace(ctx context.Context, client driver.Client, name, key string, payload any) (meta driver.DocumentMeta, resp map[string]any, err error) {
 	graph, err := arangodb.Graph(ctx, client)
 	if err != nil {
 		return
 	}
-	collection, _, err := graph.EdgeCollection(ctx, name)
+	collection, err := graph.VertexCollection(ctx, name)
 	if err != nil {
 		return
 	}
@@ -26,9 +25,9 @@ func Update(ctx context.Context, client driver.Client, name, key string, payload
 		if err = json.Unmarshal(b, &req); err != nil {
 			return
 		}
-		meta, err = collection.UpdateDocument(ctx, key, req)
+		meta, err = collection.ReplaceDocument(ctx, key, req)
 		return
 	}
-	meta, err = collection.UpdateDocument(ctx, key, payload)
+	meta, err = collection.ReplaceDocument(ctx, key, payload)
 	return
 }

@@ -2,10 +2,10 @@ module git.fg-tech.ru/listware/cmdb
 
 go 1.19
 
-replace git.fg-tech.ru/listware/proto => github.com/foliagecp/proto v0.1.0
+replace git.fg-tech.ru/listware/proto => github.com/foliagecp/proto v0.1.1
 
 require (
-	git.fg-tech.ru/listware/proto v0.1.0
+	git.fg-tech.ru/listware/proto v0.1.1
 	github.com/arangodb/go-driver v1.4.1
 	github.com/bbuck/go-lexer v1.0.0
 	github.com/manifoldco/promptui v0.9.0

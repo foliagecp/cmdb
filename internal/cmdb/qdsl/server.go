@@ -87,6 +87,7 @@ func (s *Server) Qdsl(ctx context.Context, query *pbqdsl.Query) (elements *pbqds
 			if query.Options.Remove {
 
 				if query.Options.Id {
+
 					collection, err := graph.VertexCollection(ctx, document.Id.Collection())
 					if err != nil {
 						return elements, err
