@@ -1,3 +1,4 @@
+// Copyright 2023 NJWS, Inc.
 // Copyright 2022 Listware
 
 package links
@@ -34,6 +35,15 @@ func Read(ctx context.Context, key string) (payload json.RawMessage, err error) 
 
 func Update(ctx context.Context, key string, payload any) (meta *documents.BaseDocument, err error) {
 	response, err := edge.Update(ctx, key, collection, payload)
+	if err != nil {
+		return
+	}
+	meta = documents.NewBaseDocument(response.Meta)
+	return
+}
+
+func Replace(ctx context.Context, key string, payload any) (meta *documents.BaseDocument, err error) {
+	response, err := edge.Replace(ctx, key, collection, payload)
 	if err != nil {
 		return
 	}

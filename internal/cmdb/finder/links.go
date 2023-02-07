@@ -1,4 +1,4 @@
-// Copyright 2023 NJWS, INC
+// Copyright 2023 NJWS, Inc.
 // Copyright 2022 Listware
 
 package finder

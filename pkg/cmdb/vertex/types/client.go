@@ -1,3 +1,4 @@
+// Copyright 2023 NJWS, Inc.
 // Copyright 2022 Listware
 
 package types
@@ -35,6 +36,15 @@ func Read(ctx context.Context, key string) (meta *documents.BaseDocument, payloa
 
 func Update(ctx context.Context, key string, payload any) (meta *documents.BaseDocument, err error) {
 	response, err := vertex.Update(ctx, key, collection, payload)
+	if err != nil {
+		return
+	}
+	meta = documents.NewBaseDocument(response.Meta)
+	return
+}
+
+func Replace(ctx context.Context, key string, payload any) (meta *documents.BaseDocument, err error) {
+	response, err := vertex.Replace(ctx, key, collection, payload)
 	if err != nil {
 		return
 	}
