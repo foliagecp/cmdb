@@ -19,6 +19,7 @@ const (
 	collection = "links"
 )
 
+// Links
 func (s *Server) Links(ctx context.Context, request *pbfinder.Request) (response *pbfinder.Response, err error) {
 	response = &pbfinder.Response{}
 
@@ -37,6 +38,15 @@ func (s *Server) Links(ctx context.Context, request *pbfinder.Request) (response
 		args = append(args, "t._name == @name")
 		vars["name"] = request.Name
 	}
+	if request.Type != "" {
+		args = append(args, "t._type == @type")
+		vars["type"] = request.Type
+	}
+
+	if len(args) == 0 {
+		return
+	}
+
 	filter := strings.Join(args, " && ")
 	q := fmt.Sprintf(mask, collection, filter)
 	metas, resp, err := query.Query(ctx, s.client, q, vars)
